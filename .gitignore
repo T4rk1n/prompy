@@ -115,6 +115,7 @@ venv.bak/
 .idea/misc.xml
 .idea/modules.xml
 .idea/prompy.iml
+.idea/vcs.xml
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/
@@ -159,3 +160,4 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
+/.idea/vcs.xml

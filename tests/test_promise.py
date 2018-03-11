@@ -17,11 +17,13 @@ def threaded_test(func):
         r = func(*args, **kwargs)
         while _prom_pool.is_running():
             time.sleep(0.1)
-        for t in threads:
-            t._thread.join()
-            if t.error:
-                raise t.error
-        threads = []
+        try:
+            for t in threads:
+                t._thread.join()
+                if t.error:
+                    raise t.error
+        finally:
+            threads = []
         return r
     return _wrap
 
@@ -40,4 +42,6 @@ class TPromiseTest(unittest.TestCase):
 
     @threaded_test
     def test_piter(self):
-        p = piter([2,3,4], lambda x: x + 2, prom_type=TPromise).then(print)
+        p = piter([2, 4, 6], lambda x: x + 2, prom_type=TPromise).then(
+            lambda x: self.assertTrue(x % 2 == 0)).catch(_catch_and_raise)
+
