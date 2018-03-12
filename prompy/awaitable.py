@@ -3,7 +3,7 @@ import asyncio
 from typing import Any
 
 from prompy.promise import Promise, CompleteCallback, CatchCallback, ThenCallback, PromiseStarter
-from promutils import promise_wrap
+from promtools import promise_wrap
 
 
 class AwaitablePromise(Promise):

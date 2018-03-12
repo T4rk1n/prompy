@@ -4,7 +4,7 @@ import unittest
 
 from prompy.threaded.tpromise import TPromise, _prom_pool
 
-from prompy.promutils import pall, piter
+from prompy.promtools import pall, piter
 
 threads = []
 _prom_pool.on_thread_stop(lambda e: threads.append(e))

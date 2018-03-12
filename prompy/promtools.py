@@ -1,7 +1,9 @@
 import functools
 from typing import Callable
 
-from prompy.promise import Promise
+import time
+
+from prompy.promise import Promise, PromiseState
 
 
 def promise_wrap(func, prom_type=Promise, **kw) -> Callable[..., Promise]:
@@ -36,9 +38,9 @@ class _AllPromiseWrap:
         self._reject = reject
         if not self.rejected and self.num_promises == self.res:
             resolve(self.results)
-        elif sum((1 for x in self.promises if x.resolved)) == self.num_promises:
+        elif sum((1 for x in self.promises if x.state == PromiseState.fulfilled)) == self.num_promises:
             resolve([p.result for p in self.promises])
-        elif self.rejected or sum((1 for x in self.promises if x.error)) > 0:
+        elif self.rejected or sum((1 for x in self.promises if x.state == PromiseState.rejected)) > 0:
             reject(Exception("Promise all reject"))
 
     def then(self, result):
@@ -70,4 +72,21 @@ def piter(iterable, func, prom_type=Promise, **kwargs) -> Promise:
             resolve(func(i))
 
     return prom_type(starter, **kwargs)
+
+
+def later(func, delay, wait_func=time.sleep, prom_type=Promise, **kwargs) -> Callable[..., Promise]:
+    """Bad, do not use."""
+
+    @functools.wraps(func)
+    def _wrap(*args, **kw):
+
+        def starter(resolve, reject):
+            wait_func(delay)
+            try:
+                resolve(func(*args, **kw))
+            except Exception as err:
+                reject(err)
+        return prom_type(starter, **kwargs)
+
+    return _wrap
 

@@ -1,7 +1,7 @@
 import os
 
 from prompy.promise import Promise
-from prompy.promutils import promise_wrap
+from prompy.promtools import promise_wrap
 from prompy.threaded.promise_queue import PromiseQueuePool
 
 # GLOBAL THREAD POOL
