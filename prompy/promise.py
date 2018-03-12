@@ -52,7 +52,7 @@ class Promise:
         self._raise_again = raise_again
         self._starter = starter
         self._result: Any = None
-        self._results: Deque = collections.deque(results_buffer_size)
+        self._results: Deque = collections.deque(maxlen=results_buffer_size)
         self._error: Exception = None
         self._state = PromiseState.pending
         if start_now:
