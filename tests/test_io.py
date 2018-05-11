@@ -1,4 +1,5 @@
 import unittest
+import os
 
 from prompy.promio import fileio, jsonio
 from prompy.threadio.tpromise import TPromise
@@ -23,3 +24,21 @@ class TestIO(unittest.TestCase):
                         filter_filename='(__init__\.py|\.pyc)',
                         prom_type=TPromise)
         w.then(lambda x: print(x.absolute()))
+
+    @threaded_test
+    def test_write_read_delete(self):
+        filename = 'test123'
+        content = 'hello world'
+
+        def _delete_then(_):
+            self.assertFalse(os.path.exists(filename))
+
+        def _read_then(data):
+            self.assertEqual(data, content)
+            fileio.delete_file(filename, prom_type=TPromise).then(_delete_then).catch(_catch_and_raise)
+
+        def _write_then(_):
+            fileio.read_file(filename, prom_type=TPromise).then(_read_then).catch(_catch_and_raise)
+
+        p = fileio.write_file(filename, content, prom_type=TPromise)
+        p.then(_write_then).catch(_catch_and_raise)

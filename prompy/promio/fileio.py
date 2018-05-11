@@ -17,7 +17,7 @@ def write_file(file: str, content, mode='w', prom_type=Promise, **kwargs) -> Pro
     def starter(resolve, _):
         with open(file, mode) as f:
             f.write(content)
-            resolve()
+            resolve(None)
     return prom_type(starter, **kwargs)
 
 
@@ -25,7 +25,7 @@ def delete_file(file: str, prom_type=Promise, **kwargs) -> Promise:
     def starter(resolve, _):
         if os.path.exists(file):
             os.remove(file)
-            resolve()
+            resolve(None)
         else:
             raise FileNotFoundError(file)
     return prom_type(starter, **kwargs)
