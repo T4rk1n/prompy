@@ -1,19 +1,19 @@
 import os
 
-from prompy.promise import Promise
+from prompy.promise import Promise, TPromiseResults
 from prompy.promtools import promise_wrap
-from prompy.threaded.promise_queue import PromiseQueuePool
+from prompy.threadio.promise_queue import PromiseQueuePool
 
 # GLOBAL THREAD POOL
 
 _prom_pool_size = os.getenv('PROMPY_THREAD_POOL_SIZE', 2)
-_prom_thread_idle_time = os.getenv('PROMPY_THREAD_IDLE_TIME', 2)
+_prom_thread_idle_time = os.getenv('PROMPY_THREAD_IDLE_TIME', 0.5)
 
 _prom_pool = PromiseQueuePool(start=True, pool_size=_prom_pool_size, max_idle=_prom_thread_idle_time)
 
 
 class TPromise(Promise):
-    """A promise with auto insert in a threaded promise queue."""
+    """A promise with auto insert in a threadio promise queue."""
     __promise_pool = _prom_pool
 
     def __init__(self, starter, *args, **kwargs):

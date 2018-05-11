@@ -1,14 +1,17 @@
 import collections
 import enum
 import uuid
-from typing import Callable, Any, List, Union, Deque
+from typing import Callable, Any, List, Union, Deque, TypeVar, Generic, Tuple
 
 import time
 
 from prompy.errors import UnhandledPromiseError, PromiseRejectionError
 
-CompleteCallback = Callable[[Union[List[Any], Any], Exception], None]
-ThenCallback = Callable[[Any], None]
+TPromiseResults = TypeVar('PromiseReturnType')
+
+# generics don't work with callbacks, check result prop for type.
+CompleteCallback = Callable[[Union[List[TPromiseResults], TPromiseResults], Exception], None]
+ThenCallback = Callable[[TPromiseResults], None]
 CatchCallback = Callable[[Exception], None]
 
 PromiseStarter = Callable[[Callable, Callable], None]
@@ -20,8 +23,14 @@ class PromiseState(enum.Enum):
     rejected = 3
 
 
-class Promise:
-    """Promise interface"""
+class Promise(Generic[TPromiseResults]):
+    """
+    Promise interface
+    Based on js Promises.
+
+    Basic usage:
+    p = Promise(lambda resolve, reject: resolve('Hello')).then(print)
+    """
 
     def __init__(self, starter: PromiseStarter,
                  then: ThenCallback=None,
@@ -42,11 +51,9 @@ class Promise:
         self.canceled = False
         self.completed_at = None
         self._promise_id: uuid.UUID = uuid.uuid4()
-        # TODO refactor callbacks to recursive queues
-        # TODO accumulate results of each call to resolve
-        self._then: List[Callable] = [then] if then else []
-        self._catch: List[Callable] = [catch] if catch else []
-        self._complete: List[Callable] = [complete] if complete else []
+        self._then: List[ThenCallback] = [then] if then else []
+        self._catch: List[CatchCallback] = [catch] if catch else []
+        self._complete: List[CompleteCallback] = [complete] if complete else []
         self._rejected = False
         self._completed = False
         self._raise_again = raise_again
@@ -61,11 +68,15 @@ class Promise:
     def then(self, func: ThenCallback):
         """Add a callback to resolve"""
         self._then.append(func)
+        if self.state == PromiseState.fulfilled:
+            func(self.result)
         return self
 
     def catch(self, func: CatchCallback):
         """Add a callback to rejection"""
         self._catch.append(func)
+        if self.state == PromiseState.rejected:
+            func(self.error)
         return self
 
     def complete(self, func: CompleteCallback):
@@ -73,13 +84,14 @@ class Promise:
         self._complete.append(func)
         return self
 
-    def resolve(self, result: Any):
+    def resolve(self, result: TPromiseResults):
         self._result = result  # result always the last resolved
         self._results.append(result)
         for t in self._then:
             t(result)
 
     def reject(self, error: Exception):
+        """Reject the promise."""
         self._error = error
         self._state = PromiseState.rejected
         if not self._catch:
@@ -88,7 +100,7 @@ class Promise:
             c(error)
 
     def exec(self):
-        """Wrap this with your fav async method."""
+        """Wrap this with your fav async method or call from a thread, event loop, etc."""
         try:
             self._starter(self.resolve, self.reject)
             self._state = PromiseState.fulfilled
@@ -106,7 +118,7 @@ class Promise:
         return self._promise_id
 
     @property
-    def result(self) -> Union[List, Any]:
+    def result(self) -> Union[Tuple[TPromiseResults], TPromiseResults]:
         return tuple(self._results) if len(self._results) > 1 else self._result
 
     @property

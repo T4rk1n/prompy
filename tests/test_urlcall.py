@@ -4,9 +4,8 @@ import unittest
 import threading
 from http.server import BaseHTTPRequestHandler
 
-from awaitable import AwaitablePromise
-from prompy.promisified.urlcall import url_call, json_call, UrlCallResponse
-from prompy.threaded.tpromise import TPromise
+from prompy.networkio.urlcall import url_call, json_call
+from prompy.threadio.tpromise import TPromise
 from tests.test_promise import threaded_test, _catch_and_raise
 
 

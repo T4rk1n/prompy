@@ -9,7 +9,7 @@ def loads(data: str, prom_type=Promise, **kwargs) -> Promise:
     return prom_type(starter, **kwargs)
 
 
-def dumps(data: str, prom_type=Promise, **kwargs) -> Promise:
+def dumps(data: dict, prom_type=Promise, **kwargs) -> Promise:
     def starter(resolve, _):
         resolve(json.dumps(data))
     return prom_type(starter, **kwargs)

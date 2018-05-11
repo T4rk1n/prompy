@@ -1,6 +1,7 @@
 # Prompy
 
-WIP
+Implementation of the javascript Promise interface in Python.
 
-JS like Promise for python.
+### Usage
+
 

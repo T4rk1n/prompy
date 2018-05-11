@@ -1,22 +1,26 @@
 import queue
 import threading
 import uuid
-from typing import Callable, Dict
+
+from typing import Callable
 
 import time
 
+from prompy.container import PromiseContainer, BasePromiseRunner
 from prompy.promise import Promise
 
 
-class PromiseQueue:
+class PromiseQueue(PromiseContainer):
     __thread_index = 0
 
-    def __init__(self, start=False, max_idle=10, on_stop: Callable = None, queue_timeout=0.01, interval=0.01):
+    def __init__(self, start=False, max_idle=0.5, on_stop: Callable = None, queue_timeout=0.01, interval=0.01,
+                 daemon=False):
+        super().__init__()
         self.index = PromiseQueue.__thread_index
         self._thread = threading.Thread(target=self._run, name=f"PromiseQueue-{self.index}")
+        self._thread.daemon = daemon
         PromiseQueue.__thread_index += 1
         self._queue = queue.Queue()
-        self._promises: Dict[uuid.UUID, Promise] = {}
         self._lock: threading.Lock = threading.Lock()
         self._stop_event = threading.Event()
         self._running = False
@@ -30,13 +34,14 @@ class PromiseQueue:
         if start:
             self.start()
 
-    def add(self, promise: Promise):
-        self._promises[promise.id] = promise
+    def add_promise(self, promise: Promise):
+        super(PromiseQueue, self).add_promise(promise)
         self._queue.put(promise.id)
 
     def _run(self):
         self._running = True
         idle_start = None
+        current = None
         while self._running:
             try:
                 current = self._queue.get(block=False, timeout=self._queue_timeout)
@@ -45,7 +50,6 @@ class PromiseQueue:
                 self._lock.acquire()
                 if not promise.canceled:
                     promise.exec()
-                    del self._promises[current]
                 self._lock.release()
                 self._stop_event.wait(self._interval)
                 if self._stop_event.is_set():
@@ -62,6 +66,9 @@ class PromiseQueue:
                 self._error = e
                 self._stopped()
                 raise e
+            # finally:
+            #     if current:
+            #         del self._promises[current]
         self._stopped()
 
     def start(self):
@@ -90,14 +97,15 @@ class PromiseQueue:
             self._on_stop(self)
 
 
-class PromiseQueuePool:
-    def __init__(self, pool_size=8, start=False, max_idle=2):
+class PromiseQueuePool(BasePromiseRunner):
+    def __init__(self, pool_size=8, start=False, max_idle=0.5, daemon=False):
         self._max_idle = max_idle
         self.pool_size = pool_size
+        self._daemon = daemon
         self._pool = queue.Queue(maxsize=pool_size)
         self._on_thread_stop = None
         if start:
-            self.populate()
+            self.start()
 
     def add_promise(self, promise: Promise):
         if self._pool.qsize() < self.pool_size:
@@ -107,12 +115,12 @@ class PromiseQueuePool:
             if not pq.running:
                 self._add_queue()
             else:
-                pq.add(promise)
+                pq.add_promise(promise)
                 self._pool.put(pq)
                 return
 
     def _add_queue(self):
-        pq = PromiseQueue(start=True, max_idle=self._max_idle, on_stop=self._thread_stopped)
+        pq = PromiseQueue(start=True, max_idle=self._max_idle, on_stop=self._thread_stopped, daemon=self._daemon)
         self._pool.put(pq)
 
     def stop(self):
@@ -123,7 +131,7 @@ class PromiseQueuePool:
             except queue.Empty:
                 break
 
-    def populate(self):
+    def start(self):
         while self._pool.qsize() < self.pool_size:
             try:
                 self._add_queue()
@@ -152,4 +160,3 @@ class PromiseQueuePool:
     def _thread_stopped(self, t):
         if self._on_thread_stop:
             self._on_thread_stop(t)
-
