@@ -26,5 +26,5 @@ def write_json_file(file: str, content, prom_type=Promise, **kwargs) -> Promise:
     def starter(resolve, _):
         with open(file, 'wb') as f:
             json.dump(content, f)
-            resolve()
+            resolve(None)
     return prom_type(starter, **kwargs)
