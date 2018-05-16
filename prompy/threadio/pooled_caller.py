@@ -40,7 +40,7 @@ class PooledCaller:
 
     @container_wrap
     def head(self, url, **kwargs):
-        return urlcall.url_call(url, )
+        return urlcall.url_call(url, **kwargs)
 
     def add_promise(self, promise: Promise):
         self._pool.add_promise(promise)

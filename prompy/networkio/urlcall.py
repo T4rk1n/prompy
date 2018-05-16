@@ -24,6 +24,7 @@ def encode_url_params(url: str, params: Dict[str, Any]) -> str:
 
 def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=False, method=None,
              prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
+    """Base request call."""
     def starter(resolve, reject):
         try:
             req = request.Request(url, data=data, headers=headers or {},
@@ -57,6 +58,7 @@ def put(url, data, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
 
 def json_call(url,
               payload=None, encoding='UTF-8', prom_type=Promise, headers=None, **kwargs) -> Promise[UrlCallResponse]:
+    """Auto encode payload and decode response in json."""
     headers = headers or {}
 
     def starter(resolve, reject):

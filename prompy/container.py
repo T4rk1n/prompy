@@ -11,6 +11,10 @@ class BasePromiseContainer:
     def add_promise(self, promise: Promise):
         raise NotImplementedError
 
+    def add_promises(self, *promises):
+        for promise in promises:
+            self.add_promise(promise)
+
 
 class BasePromiseRunner(BasePromiseContainer):
     def add_promise(self, promise: Promise):

@@ -17,7 +17,7 @@ def write_file(file: str, content, mode='w', prom_type=Promise, **kwargs) -> Pro
     def starter(resolve, _):
         with open(file, mode) as f:
             f.write(content)
-            resolve(None)
+        resolve(None)
     return prom_type(starter, **kwargs)
 
 
