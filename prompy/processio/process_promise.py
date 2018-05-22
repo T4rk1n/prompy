@@ -78,6 +78,7 @@ class ProcessPromiseQueue(BasePromiseContainer):
 
     def run(self):
         idle_start = None
+        self._running = True
 
         while True:
             try:
@@ -93,13 +94,20 @@ class ProcessPromiseQueue(BasePromiseContainer):
                         if self._on_idle:
                             stop = self._on_idle()
                             if stop:
+                                self._running = False
                                 return
                         else:
+                            self._running = False
                             return
 
     @property
     def id(self) -> int:
         return self._index
+
+
+    @property
+    def running(self):
+        return self._running
 
 
 class _ProcessingQueue(NamedTuple):
@@ -117,6 +125,7 @@ class PromiseProcessPool(BasePromiseRunner):
         self._next_process_id = 0
         self._pool = multiprocessing.Pool(processes=pool_size)
         self._processes: List[_ProcessingQueue] = []
+        self._responses = []
         self._pool_size = pool_size
         if populate:
             self.populate()
@@ -138,6 +147,9 @@ class PromiseProcessPool(BasePromiseRunner):
     def populate(self, ):
         while len(self._processes) < self._pool_size:
             self.add_queue()
+
+    def running(self):
+        return all([x.queue.running for x in self._processes])
 
     def stop(self):
         for proc in self._processes:

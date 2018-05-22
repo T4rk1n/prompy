@@ -27,16 +27,6 @@ promise.then(lambda result: print(result))
 promise.exec()  # prints hello
 ```
 
-#### 3 types of promises.
-
-1. TPromise - Threaded Promise.
-2. ProcessPromise - WIP.
-3. AwaitablePromise - asyncio compatible, WIP.
-
-All promise wrapper methods take an optional prom_type argument, default: Promise.
-
-** Note: Synchronous code inside `AwaitablePromise` will block (ie: requests will block). **
-
 #### UrlCall
 
 Non-blocking promise wrappers for urllib requests.
@@ -52,7 +42,7 @@ gh = caller.get('https://github.com')
 gh.then(lambda rep: print(rep.content))
 ```
 
-#### promio
+#### Promio
 
 Promise wrapped standard lib io.
 
