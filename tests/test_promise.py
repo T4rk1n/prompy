@@ -2,7 +2,7 @@ import time
 import functools
 import unittest
 
-from prompy.threaded.tpromise import TPromise, _prom_pool
+from prompy.threadio.tpromise import TPromise, _prom_pool
 
 from prompy.promtools import pall, piter
 

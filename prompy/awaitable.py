@@ -2,8 +2,9 @@ import asyncio
 
 from typing import Any
 
+from prompy.container import BasePromiseRunner
 from prompy.promise import Promise, CompleteCallback, CatchCallback, ThenCallback, PromiseStarter
-from promtools import promise_wrap
+from prompy.promtools import promise_wrap
 
 
 class AwaitablePromise(Promise):
@@ -31,3 +32,13 @@ class AwaitablePromise(Promise):
     @staticmethod
     def wrap(func):
         return promise_wrap(func, prom_type=AwaitablePromise)
+
+
+class AsyncPromiseRunner(BasePromiseRunner):
+    """Run the loop forever"""
+    def add_promise(self, promise: Promise):
+        pass
+
+    def start(self):
+        loop = asyncio.get_event_loop()
+        loop.run_forever()

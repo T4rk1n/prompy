@@ -3,11 +3,8 @@ from typing import NamedTuple, Dict, Any
 from urllib import request, parse, error
 
 from prompy.errors import UrlCallError
+from prompy.networkio.http_constants import HTTP_POST, HTTP_PUT
 from prompy.promise import Promise
-
-HTTP_GET = 'GET'
-HTTP_POST = 'POST'
-HTTP_PUT = 'PUT'
 
 
 class UrlCallResponse(NamedTuple):
@@ -26,7 +23,8 @@ def encode_url_params(url: str, params: Dict[str, Any]) -> str:
 
 
 def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=False, method=None,
-             prom_type=Promise, **kwargs) -> Promise:
+             prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
+    """Base request call."""
     def starter(resolve, reject):
         try:
             req = request.Request(url, data=data, headers=headers or {},
@@ -44,21 +42,23 @@ def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=Fa
     return prom_type(starter, **kwargs)
 
 
-def post(url, data=None, prom_type=Promise, **kwargs) -> Promise:
+def post(url, data=None, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
     return url_call(url, method=HTTP_POST, data=data, prom_type=prom_type, **kwargs)
 
 
-def get(url, params: dict=None, prom_type=Promise, **kwargs) -> Promise:
+def get(url, params: dict=None, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
     if params:
         url = encode_url_params(url, params)
     return url_call(url, prom_type=prom_type, **kwargs)
 
 
-def put(url, data, prom_type=Promise, **kwargs) -> Promise:
-    return url_call(url, data, prom_type=prom_type, **kwargs)
+def put(url, data, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
+    return url_call(url, data, method=HTTP_PUT, prom_type=prom_type, **kwargs)
 
 
-def json_call(url, payload=None, encoding='UTF-8', prom_type=Promise, headers=None, **kwargs) -> Promise:
+def json_call(url,
+              payload=None, encoding='UTF-8', prom_type=Promise, headers=None, **kwargs) -> Promise[UrlCallResponse]:
+    """Auto encode payload and decode response in json."""
     headers = headers or {}
 
     def starter(resolve, reject):
@@ -73,5 +73,6 @@ def json_call(url, payload=None, encoding='UTF-8', prom_type=Promise, headers=No
                 reject(UrlCallError(f"json_call: Content-Type is not json: {rep.content_type}"))
 
         call.then(on_call_end).catch(reject)
+
     return prom_type(starter)
 
