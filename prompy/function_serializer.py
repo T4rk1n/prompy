@@ -1,6 +1,5 @@
 import marshal
 import types
-import ctypes
 
 from typing import NamedTuple
 
@@ -42,5 +41,6 @@ def deserialize_fun(fun: SerializedFunction, namespace=None):
     code = marshal.loads(fun.code)
     argsdef = marshal.loads(fun.argsdef)
     closure = deserialize_closure(fun.closure)
+    # noinspection PyArgumentList
     return types.FunctionType(code, namespace, fun.name, argsdef, closure)
 

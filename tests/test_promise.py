@@ -42,6 +42,6 @@ class TPromiseTest(unittest.TestCase):
 
     @threaded_test
     def test_piter(self):
-        p = piter([2, 4, 6], lambda x: x + 2, prom_type=TPromise).then(
-            lambda x: self.assertTrue(x % 2 == 0)).catch(_catch_and_raise)
+        p = piter(lambda x: x + 2, [2, 4, 6], prom_type=TPromise)
+        p.then(lambda x: self.assertTrue(x % 2 == 0)).catch(_catch_and_raise)
 
