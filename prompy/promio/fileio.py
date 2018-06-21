@@ -42,11 +42,12 @@ def walk(directory,
             file_filter = re.compile(filter_filename)
         for current, sub_directories, files in os.walk(directory):
             if dir_filter:
-                index = 0
+                to_delete = []
                 for s in sub_directories:
                     if dir_filter.match(s):
-                        del sub_directories[index]
-                    index += 1
+                        to_delete.append(s)
+                for i in to_delete:
+                    sub_directories.remove(i)
             file_list = files
             if file_filter:
                 file_list = filter(lambda f: not file_filter.match(f), files)
@@ -66,7 +67,9 @@ def compress_directory(directory, destination,
     return prom_type(starter, **kwargs)
 
 
-def decompress(file, prom_type=Promise, **kwargs) -> Promise:
-    def starter(resolve, reject):
-        pass
+def decompress(filename, destination,
+               archive_format='zip', prom_type=Promise, **kwargs) -> Promise:
+    def starter(resolve, _):
+        shutil.unpack_archive(filename, destination, archive_format)
+        resolve(destination)
     return prom_type(starter, **kwargs)
