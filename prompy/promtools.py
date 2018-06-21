@@ -66,7 +66,8 @@ def pall(*promises, prom_type=Promise, **kwargs) -> Promise:
     return prom_type(starter, **kwargs)
 
 
-def piter(iterable, func, prom_type=Promise, **kwargs) -> Promise:
+def piter(func, iterable, prom_type=Promise, **kwargs) -> Promise:
+    """Applies func to iterable in a promise, like a map and foreach (starter->then)."""
     def starter(resolve, _):
         for i in iterable:
             resolve(func(i))

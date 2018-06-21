@@ -4,7 +4,9 @@ import unittest
 import threading
 from http.server import BaseHTTPRequestHandler
 
+from prompy.networkio.call_factory import Caller, CallRoute
 from prompy.networkio.urlcall import url_call, json_call
+from prompy.promise import Promise
 from prompy.threadio.tpromise import TPromise
 from tests.test_promise import threaded_test, _catch_and_raise
 
@@ -13,7 +15,7 @@ class MockServer(BaseHTTPRequestHandler):
     def set_headers(self, response_code=200, content_type='text/html', headers={}):
         self.send_response(response_code)
         self.send_header('Content-Type', content_type)
-        for k,v in headers.items():
+        for k, v in headers.items():
             self.send_header(k, v)
         self.end_headers()
 
@@ -26,14 +28,11 @@ class MockServer(BaseHTTPRequestHandler):
 
     def do_POST(self):
         data = self._get_data().decode('utf-8')
-        print(data)
 
         if self.path == '/testjson':
             content_type = self.get_content_type()
-            print(content_type)
             j = json.loads(data)
             msg = j.get('msg')
-            print('msg')
             self.set_headers(content_type='application/json')
             self.wfile.write(json.dumps({'said': msg}).encode('utf-8'))
         else:
@@ -79,8 +78,34 @@ class TestUrlCall(unittest.TestCase):
 
         def json_then(rep):
             print(rep)
-            said = rep.get('said')
+            said = rep.content.get('said')
             self.assertEqual(said, 'hello')
 
         j = json_call('http://localhost:8000/testjson', method='POST', payload={'msg': 'hello'}, prom_type=TPromise)
         j.then(json_then).catch(_catch_and_raise)
+
+    @threaded_test
+    def test_call_factory(self):
+        class TestCaller(Caller):
+
+            def route_home(self, **kwargs):
+                return CallRoute('/')
+
+            def route_post_json(self, **kwargs):
+                return CallRoute('/testjson', method='POST')
+
+        caller = TestCaller(base_url='http://localhost:8000', prom_type=TPromise)
+        p: Promise = caller.route_home()
+
+        @p.then
+        def _p_then(rep):
+            self.assertEqual(rep.content.decode('utf-8'), 'hello')
+
+        p.catch(_catch_and_raise)
+
+        p2: Promise = caller.route_post_json(data={'msg': 'you got a call'})
+
+        @p2.then
+        def _p2_then(rep):
+            self.assertTrue(isinstance(rep.content, dict))
+            self.assertEqual(rep.content.get('said'), 'you got a call')

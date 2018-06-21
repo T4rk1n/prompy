@@ -36,7 +36,9 @@ class Promise(Generic[TPromiseResults]):
                  then: ThenCallback=None,
                  catch: CatchCallback=None,
                  complete: CompleteCallback=None,
-                 raise_again: bool=False, start_now: bool=False, results_buffer_size: int = 100):
+                 raise_again: bool=False,
+                 start_now: bool=False,
+                 results_buffer_size: int = 100):
         """
         Promise takes at least a starter method with params to this promise resolve and reject.
         Does not call exec by default but with start_now the execution will be synchronous.

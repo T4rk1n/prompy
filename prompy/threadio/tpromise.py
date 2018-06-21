@@ -1,6 +1,6 @@
 import os
 
-from prompy.promise import Promise, TPromiseResults
+from prompy.promise import Promise
 from prompy.promtools import promise_wrap
 from prompy.threadio.promise_queue import PromiseQueuePool
 
@@ -13,7 +13,7 @@ _prom_pool = PromiseQueuePool(start=True, pool_size=_prom_pool_size, max_idle=_p
 
 
 class TPromise(Promise):
-    """A promise with auto insert in a threadio promise queue."""
+    """A promise with auto insert in a threadio.PromiseQueue."""
     __promise_pool = _prom_pool
 
     def __init__(self, starter, *args, **kwargs):

@@ -12,4 +12,5 @@ HTTP_PATCH = 'PATCH'
 
 CONTENT_TYPE = 'Content-Type'
 
-
+CONTENT_TYPE_HTML = 'text/html'
+CONTENT_TYPE_JSON = 'application/json'
