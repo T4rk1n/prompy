@@ -1,3 +1,4 @@
+"""Promise for python"""
 import collections
 import enum
 import uuid
@@ -101,10 +102,14 @@ class Promise(Generic[TPromiseResults]):
         for c in self._catch:
             c(error)
 
+    def finish(self):
+        for c in self._complete:
+            c(self.result, self._error)
+
     def exec(self):
         """Wrap this with your fav async method or call from a thread, event loop, etc."""
         try:
-            self._starter(self.resolve, self.reject)
+            self._starter_handler(self._starter(self.resolve, self.reject))
             self._state = PromiseState.fulfilled
         except Exception as error:
             self.reject(error)
@@ -112,8 +117,11 @@ class Promise(Generic[TPromiseResults]):
                 raise PromiseRejectionError(f"Promise {self.id} was rejected") from error
         finally:
             self.completed_at = time.time()
-            for c in self._complete:
-                c(self.result, self._error)
+            self.finish()
+
+    def _starter_handler(self, started):
+        """Override to handle the return value of the starter callback."""
+        pass
 
     @property
     def id(self) -> uuid.UUID:

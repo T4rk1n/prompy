@@ -16,7 +16,7 @@ def threaded_test(func):
         global threads
         r = func(*args, **kwargs)
         while _prom_pool.is_running():
-            time.sleep(0.1)
+            time.sleep(0.03)
         try:
             for t in threads:
                 t._thread.join()
