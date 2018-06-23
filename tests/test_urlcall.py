@@ -21,7 +21,10 @@ class MockServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.set_headers()
-        self.wfile.write('hello'.encode('utf-8'))
+        if 'testurlparams' in self.path:
+            self.wfile.write(self.path.encode('utf-8'))
+        else:
+            self.wfile.write('hello'.encode('utf-8'))
 
     def do_HEAD(self):
         self.set_headers()
@@ -86,6 +89,7 @@ class TestUrlCall(unittest.TestCase):
 
     @threaded_test
     def test_call_factory(self):
+
         class TestCaller(Caller):
 
             def call_home(self, **kwargs):
@@ -94,12 +98,16 @@ class TestUrlCall(unittest.TestCase):
             def call_post_json(self, **kwargs):
                 return CallRoute('/testjson', method='POST')
 
+            def call_url_params(self, p):
+                return CallRoute('/testurlparams/<p>')
+
         caller = TestCaller(base_url='http://localhost:8000', prom_type=TPromise)
         p: Promise = caller.call_home()
 
+
         @p.then
         def _p_then(rep):
-            self.assertEqual(rep.content.decode('utf-8'), 'hello')
+            self.assertEqual(rep.content, 'hello')
 
         p.catch(_catch_and_raise)
 
@@ -109,3 +117,12 @@ class TestUrlCall(unittest.TestCase):
         def _p2_then(rep):
             self.assertTrue(isinstance(rep.content, dict))
             self.assertEqual(rep.content.get('said'), 'you got a call')
+
+        param = 'option'
+        p3: Promise = caller.call_url_params(param)
+
+        @p3.then
+        def _p3_then(rep):
+            self.assertTrue(param in rep.content)
+
+

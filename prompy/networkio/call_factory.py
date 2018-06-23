@@ -21,7 +21,7 @@ Usage:
 
     pool = PromiseQueuePool(start=True)
     api = Api(base_url='http://localhost:5000', promise_container=pool)
-    api.route_data(data={'num': 6}).then(print).catch(print)
+    api.call_data(data={'num': 6}).then(print).catch(print)
 
 """
 import json
@@ -35,7 +35,7 @@ from prompy.networkio.urlcall import encode_url_params
 from prompy.promise import Promise
 
 
-_route_params_pattern = re.compile('<.*>')
+_route_params_pattern = re.compile('<(\w*)>')
 
 
 class CallRoute:
@@ -54,10 +54,11 @@ class CallRoute:
         """
         self.route = route
         self.method = method
-        self.route_params = _route_params_pattern.search(self.route)
+        self.route_params = _route_params_pattern.findall(self.route)
+        self.route_params_length = len(self.route_params)
         self.content_type = content_type
 
-    def format_route_params(self, **kwargs):
+    def format_route_params(self, *args):
         """
         Format the route params.
 
@@ -74,11 +75,13 @@ class CallRoute:
         if not self.route_params:
             return self.route
         route = self.route
-        for p in self.route_params:
-            value = kwargs.get(p)
-            if not p:
-                raise Exception(f'Missing url parameter <{p}>')
-            route = route.replace(p, value)
+        if len(args) != self.route_params_length:
+            s = ','.join(self.route_params[len(args):])
+            raise Exception(f'Missing url parameter <{s}>')
+        for i in range(self.route_params_length):
+            p = self.route_params[i]
+            value = args[i]
+            route = route.replace(f'<{p}>', str(value))
         return route
 
     def format_data(self, data: Optional[Union[Dict, List, str]]):
@@ -104,7 +107,7 @@ class _MetaCall(type):
             @functools.wraps(func)
             def _inner(self: Caller, *args, **kwargs):
                 route: CallRoute = func(self, *args, **kwargs)
-                promise = self.call(route, *args, **kwargs)
+                promise = self.call(route, args, **kwargs)
                 return promise
             return _inner
 
@@ -141,7 +144,7 @@ class Caller(metaclass=_MetaCall):
 
     def call(self,
              route: CallRoute,
-             route_params: dict=None,
+             route_params: list=None,
              params: dict=None,
              headers: dict=None,
              origin_req_host=None,
@@ -161,11 +164,9 @@ class Caller(metaclass=_MetaCall):
         :param kwargs:
         :return:
         """
-        url = f'{self.base_url}{route.format_route_params(**kwargs)}'
+        url = f'{self.base_url}{route.format_route_params(*route_params)}'
         if params:
             url = encode_url_params(url, params)
-        if route_params:
-            url = route.format_route_params(**route_params)
 
         self.before_call(route, route_params, params)
 
@@ -189,7 +190,7 @@ class Caller(metaclass=_MetaCall):
             self.promise_container.add_promise(promise)
         return promise
 
-    def before_call(self, route: CallRoute, route_params: dict, params: dict):
+    def before_call(self, route: CallRoute, route_params: list, params: dict):
         """
         global before call callback.
 
@@ -200,7 +201,7 @@ class Caller(metaclass=_MetaCall):
         """
         pass
 
-    def after_call(self, route: CallRoute, route_params: dict, params: dict, result: Any, error: Any):
+    def after_call(self, route: CallRoute, route_params: list, params: dict, result: Any, error: Any):
         """
         global after call callback
 

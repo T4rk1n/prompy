@@ -22,16 +22,39 @@ def encode_url_params(url: str, params: Dict[str, Any]) -> str:
     return f"{url}?{data}"
 
 
-def default_mapper(content_type, content):
+def default_mapper(content_type: str, content: Any):
+    """
+    Default mapper for :py:func:`url_call`
+
+    :param content_type: support `application/json`
+    :param content: to deserialize
+    :return: deserialized content if possible
+    """
     if 'application/json' in content_type:
         return json.loads(content)
+    if any(x in content_type for x in ('text/html', 'text/plain')):
+        return content.decode()
     return content
 
 
 def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=False, method=None,
              content_mapper: Callable[[str, str], Any] = default_mapper,
              prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
-    """Base request call."""
+    """
+    Base http call
+
+    :param url:
+    :param data:
+    :param headers:
+    :param origin_req_host:
+    :param unverifiable:
+    :param method:
+    :param session:
+    :param content_mapper:
+    :param prom_type:
+    :param kwargs:
+    :return: A promise to resolve with a response.
+    """
     def starter(resolve, reject):
         try:
             req = request.Request(url, data=data, headers=headers or {},
@@ -47,7 +70,7 @@ def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=Fa
                 resolve(UrlCallResponse(url, content_type, content, rep.status, headers, rep.msg, rep.reason))
         except error.HTTPError as e:
             e.read()
-            reject(UrlCallError(f"{e.code} : {e.reason}"))
+            reject(UrlCallError(f" {url} : {e.code} : {e.reason}"))
     return prom_type(starter, **kwargs)
 
 
