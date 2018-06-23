@@ -88,14 +88,14 @@ class TestUrlCall(unittest.TestCase):
     def test_call_factory(self):
         class TestCaller(Caller):
 
-            def route_home(self, **kwargs):
+            def call_home(self, **kwargs):
                 return CallRoute('/')
 
-            def route_post_json(self, **kwargs):
+            def call_post_json(self, **kwargs):
                 return CallRoute('/testjson', method='POST')
 
         caller = TestCaller(base_url='http://localhost:8000', prom_type=TPromise)
-        p: Promise = caller.route_home()
+        p: Promise = caller.call_home()
 
         @p.then
         def _p_then(rep):
@@ -103,7 +103,7 @@ class TestUrlCall(unittest.TestCase):
 
         p.catch(_catch_and_raise)
 
-        p2: Promise = caller.route_post_json(data={'msg': 'you got a call'})
+        p2: Promise = caller.call_post_json(data={'msg': 'you got a call'})
 
         @p2.then
         def _p2_then(rep):
