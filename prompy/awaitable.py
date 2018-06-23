@@ -1,26 +1,28 @@
 """
 Promise you can await.
 
-Usage:
-```
-import asyncio
+:Example:
 
-from prompy.awaitable import AwaitablePromise
-from prompy.networkio.urlcall import url_call
+.. code-block:: python
 
-async def call_starter(resolve, _):
-    google = await url_call('http://www.google.com', prom_type=AwaitablePromise)
-    resolve(google)
+    import asyncio
 
-p = AwaitablePromise(call_starter)
+    from prompy.awaitable import AwaitablePromise
+    from prompy.networkio.urlcall import url_call
 
-@p.then
-def then(result):
-    print(result)
-    asyncio.get_event_loop().stop()
+    async def call_starter(resolve, _):
+        google = await url_call('http://www.google.com', prom_type=AwaitablePromise)
+        resolve(google)
 
-asyncio.get_event_loop().run_forever()
-```
+    p = AwaitablePromise(call_starter)
+
+    @p.then
+    def then(result):
+        print(result)
+        asyncio.get_event_loop().stop()
+
+    asyncio.get_event_loop().run_forever()
+
 """
 import asyncio
 
@@ -73,7 +75,7 @@ class AwaitablePromise(Promise):
 
     def finish(self):
         for c in self._complete:
-            self._ensure_awaited(c(self.result))
+            self._ensure_awaited(c(self.result, self.error))
 
     def __await__(self):
         while not self.future.done():
