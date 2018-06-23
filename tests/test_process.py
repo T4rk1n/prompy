@@ -1,7 +1,8 @@
 import unittest
 import time
 
-from prompy.processio.process_promise import PromiseProcessPool, ProcessPromise
+from prompy.processio.process_promise import ProcessPromise
+from prompy.processio.process_containers import PromiseProcessPool
 from prompy.errors import UnhandledPromiseError
 
 
