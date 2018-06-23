@@ -1,3 +1,14 @@
+"""
+Threaded Promise
+
+Auto insert in a global thread pool.
+
+Use the following environ vars:
+
+* PROMPY_THREAD_POOL_SIZE=2
+* PROMPY_THREAD_IDLE_TIME=0.5
+* PROMPY_THREAD_DAEMON=false
+"""
 import os
 
 from prompy.promise import Promise
@@ -9,7 +20,7 @@ from prompy.threadio.promise_queue import PromiseQueuePool
 _prom_pool_size = os.getenv('PROMPY_THREAD_POOL_SIZE', 2)
 _prom_thread_idle_time = os.getenv('PROMPY_THREAD_IDLE_TIME', 0.5)
 
-_prom_pool = PromiseQueuePool(start=True, pool_size=_prom_pool_size, max_idle=_prom_thread_idle_time)
+_prom_pool = PromiseQueuePool(pool_size=_pool_size, max_idle=_idle_time, daemon=_daemon)
 
 
 class TPromise(Promise):
@@ -24,6 +35,6 @@ class TPromise(Promise):
     def stop_queue(cls):
         cls.__promise_pool.stop()
 
-    @staticmethod
-    def wrap(func):
-        return promise_wrap(func, prom_type=TPromise)
+    @classmethod
+    def wrap(cls, func):
+        return promise_wrap(func, prom_type=cls)

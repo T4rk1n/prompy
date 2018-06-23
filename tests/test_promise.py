@@ -37,11 +37,16 @@ class TPromiseTest(unittest.TestCase):
     @threaded_test
     def test_tpromise(self):
         t = TPromise.wrap(lambda x: x + 3)
+        print('hello')
         e = t(4).then(lambda x: self.assertEqual(x, 7, "4+3 = 7")).catch(_catch_and_raise)
         self.assertTrue(isinstance(e, TPromise))
+        print('world')
 
     @threaded_test
     def test_piter(self):
         p = piter(lambda x: x + 2, [2, 4, 6], prom_type=TPromise)
         p.then(lambda x: self.assertTrue(x % 2 == 0)).catch(_catch_and_raise)
 
+
+if __name__ == '__main__':
+    unittest.main()

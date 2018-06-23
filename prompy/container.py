@@ -2,21 +2,35 @@ import collections
 import uuid
 import functools
 
-from typing import Dict, Callable
+from typing import Dict, Callable, List
 
 from prompy.promise import Promise
 
 
 class BasePromiseContainer:
+    """Interface for a promise container."""
     def add_promise(self, promise: Promise):
+        """
+        Add a promise to the container.
+
+        :param promise:
+        :return:
+        """
         raise NotImplementedError
 
-    def add_promises(self, *promises):
+    def add_promises(self, *promises: Promise):
+        """
+        Add all the promises.
+
+        :param promises: promises to add
+        :return:
+        """
         for promise in promises:
             self.add_promise(promise)
 
 
 class BasePromiseRunner(BasePromiseContainer):
+    """A container that need to start and stop."""
     def add_promise(self, promise: Promise):
         raise NotImplementedError
 
@@ -28,6 +42,11 @@ class BasePromiseRunner(BasePromiseContainer):
 
 
 class PromiseContainer(BasePromiseContainer, collections.Container):
+    """
+    Basic promise container.
+
+    Keeps the promises in a dict with the promise id as key.
+    """
     def __init__(self):
         self._promises: Dict[uuid.UUID, Promise] = {}
 

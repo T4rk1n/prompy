@@ -1,3 +1,4 @@
+"""Methods for working with promises."""
 import functools
 from typing import Callable
 

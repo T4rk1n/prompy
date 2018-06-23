@@ -1,19 +1,56 @@
+"""
+Promise creators to deal with files.
+
+Read, write, delete, compress, decompress, walk.
+
+:Example:
+
+.. code-block:: python
+
+    from prompy.threadio.tpromise import TPromise
+    from prompy.promio import fileio
+
+    filename = 'myfile'
+
+    f = fileio.write_file(filename, 'content', prom_type=TPromise)
+    f.then(lambda _: fileio.read_file(filename).then(lambda data: print(data)))
+"""
 import os
 import re
 import pathlib
 import shutil
+from typing import Any
 
 from prompy.promise import Promise
 
 
 def read_file(file: str, mode='r', prom_type=Promise, **kwargs) -> Promise:
+    """
+    Read a file in a promise.
+
+    :param file: to open
+    :param mode: open mode ('r', 'rb')
+    :param prom_type: Type of the promise to instantiate.
+    :param kwargs: kwargs of the promise initializer.
+    :return: Promise that will resolve with the content of the file.
+    """
     def starter(resolve, _):
         with open(file, mode) as f:
             resolve(f.read())
     return prom_type(starter, **kwargs)
 
 
-def write_file(file: str, content, mode='w', prom_type=Promise, **kwargs) -> Promise:
+def write_file(file: str, content: Any, mode: str='w', prom_type=Promise, **kwargs) -> Promise:
+    """
+    Write to a file and resolve when it's done.
+
+    :param file: to open.
+    :param content: to write.
+    :param mode: open mode ('w', 'wb')
+    :param prom_type: Type of the promise to instantiate.
+    :param kwargs: kwargs of the promise initializer.
+    :return:
+    """
     def starter(resolve, _):
         with open(file, mode) as f:
             f.write(content)
@@ -31,8 +68,19 @@ def delete_file(file: str, prom_type=Promise, **kwargs) -> Promise:
     return prom_type(starter, **kwargs)
 
 
-def walk(directory,
-         filter_directories=None, filter_filename=None, prom_type=Promise, **kwargs) -> Promise[pathlib.Path]:
+def walk(directory: str,
+         filter_directories: str=None, filter_filename: str=None, prom_type=Promise, **kwargs) -> Promise[pathlib.Path]:
+    """
+    Resolve a path for each of the file found in the directory.
+
+    :param directory: path to walk.
+    :param filter_directories: a regex filter to apply to directory.
+    :param filter_filename: a regex filter to apply to filenames.
+    :param prom_type: Type of the promise to instantiate.
+    :param kwargs: kwargs of the promise initializer.
+    :return:
+    """
+
     def starter(resolve, _):
         dir_filter = None
         file_filter = None
@@ -59,16 +107,36 @@ def walk(directory,
     return prom_type(starter, **kwargs)
 
 
-def compress_directory(directory, destination,
-                       archive_format='zip', root_dir='.', prom_type=Promise, **kwargs) -> Promise:
+def compress_directory(directory: str, destination: str,
+                       archive_format: str='zip', root_dir: str='.', prom_type=Promise, **kwargs) -> Promise:
+    """
+
+    :param directory:
+    :param destination:
+    :param archive_format:
+    :param root_dir:
+    :param prom_type:
+    :param kwargs:
+    :return:
+    """
     def starter(resolve, _):
         archive = shutil.make_archive(destination, archive_format, base_dir=directory, root_dir=root_dir)
         resolve(archive)
     return prom_type(starter, **kwargs)
 
 
-def decompress(filename, destination,
-               archive_format='zip', prom_type=Promise, **kwargs) -> Promise:
+def decompress(filename: str, destination: str,
+               archive_format: str='zip', prom_type=Promise, **kwargs) -> Promise:
+    """
+
+
+    :param filename:
+    :param destination:
+    :param archive_format:
+    :param prom_type:
+    :param kwargs:
+    :return:
+    """
     def starter(resolve, _):
         shutil.unpack_archive(filename, destination, archive_format)
         resolve(destination)
