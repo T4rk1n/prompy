@@ -30,7 +30,8 @@ class Promise(Generic[TPromiseResults]):
     Based on js Promises.
 
     Basic usage:
-    p = Promise(lambda resolve, reject: resolve('Hello')).then(print)
+
+    `p = Promise(lambda resolve, reject: resolve('Hello')).then(print)`
     """
 
     def __init__(self, starter: PromiseStarter,
@@ -43,6 +44,7 @@ class Promise(Generic[TPromiseResults]):
         """
         Promise takes at least a starter method with params to this promise resolve and reject.
         Does not call exec by default but with start_now the execution will be synchronous.
+
         :param starter: otherwise known as executor.
         :param then: initial resolve callback
         :param catch: initial catch callback
@@ -69,32 +71,58 @@ class Promise(Generic[TPromiseResults]):
             self.exec()
 
     def then(self, func: ThenCallback):
-        """Add a callback to resolve"""
+        """
+        Add a callback to resolve
+
+        :param func: callback to resolve
+        :return:
+        """
         self._then.append(func)
         if self.state == PromiseState.fulfilled:
             func(self.result)
         return self
 
     def catch(self, func: CatchCallback):
-        """Add a callback to rejection"""
+        """
+        Add a callback to rejection
+
+        :param func:
+        :return:
+        """
         self._catch.append(func)
         if self.state == PromiseState.rejected:
             func(self.error)
         return self
 
     def complete(self, func: CompleteCallback):
-        """Add a callback to finally block"""
+        """
+        Add a callback to finally block
+
+        :param func:
+        :return:
+        """
         self._complete.append(func)
         return self
 
     def resolve(self, result: TPromiseResults):
+        """
+        Resolve the promise, called by executor.
+
+        :param result:
+        :return:
+        """
         self._result = result  # result always the last resolved
         self._results.append(result)
         for t in self._then:
             t(result)
 
     def reject(self, error: Exception):
-        """Reject the promise."""
+        """
+        Reject the promise.
+
+        :param error:
+        :return:
+        """
         self._error = error
         self._state = PromiseState.rejected
         if not self._catch:
@@ -107,9 +135,14 @@ class Promise(Generic[TPromiseResults]):
             c(self.result, self._error)
 
     def exec(self):
-        """Wrap this with your fav async method or call from a thread, event loop, etc."""
+        """
+        Execute the starter method.
+
+        :return:
+        """
         try:
-            self._starter_handler(self._starter(self.resolve, self.reject))
+            started = self._starter(self.resolve, self.reject)
+            self._starter_handler(started)
             self._state = PromiseState.fulfilled
         except Exception as error:
             self.reject(error)
@@ -121,7 +154,13 @@ class Promise(Generic[TPromiseResults]):
 
     def _starter_handler(self, started):
         """Override to handle the return value of the starter callback."""
-        pass
+        # handle a generator.
+        if hasattr(started, '__iter__') and not hasattr(started, '__len__'):
+            try:
+                while next(started):
+                    pass
+            except StopIteration:
+                pass
 
     @property
     def id(self) -> uuid.UUID:
@@ -138,4 +177,3 @@ class Promise(Generic[TPromiseResults]):
     @property
     def state(self) -> PromiseState:
         return self._state
-
