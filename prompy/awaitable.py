@@ -8,10 +8,10 @@ Promise you can await.
     import asyncio
 
     from prompy.awaitable import AwaitablePromise
-    from prompy.networkio.urlcall import url_call
+    from prompy.networkio.async_call import call
 
     async def call_starter(resolve, _):
-        google = await url_call('http://www.google.com', prom_type=AwaitablePromise)
+        google = await call('http://www.google.com')
         resolve(google)
 
     p = AwaitablePromise(call_starter)
@@ -20,6 +20,11 @@ Promise you can await.
     def then(result):
         print(result)
         asyncio.get_event_loop().stop()
+
+    @p.catch
+    def catch(err):
+        asyncio.get_event_loop().stop()
+        raise err
 
     asyncio.get_event_loop().run_forever()
 
@@ -30,7 +35,8 @@ from typing import Any
 
 from prompy.container import BasePromiseRunner
 from prompy.errors import UnhandledPromiseError
-from prompy.promise import Promise, CompleteCallback, CatchCallback, ThenCallback, PromiseStarter, PromiseState
+from prompy.promise import Promise, CompleteCallback,\
+    CatchCallback, ThenCallback, PromiseStarter, PromiseState
 from prompy.promtools import promise_wrap
 
 
@@ -42,8 +48,11 @@ class AwaitablePromise(Promise):
     Need a running loop to actually start the executor.
     """
 
-    def __init__(self, starter: PromiseStarter, then: ThenCallback = None, catch: CatchCallback = None,
-                 complete: CompleteCallback = None, loop=None):
+    def __init__(self, starter: PromiseStarter,
+                 then: ThenCallback = None,
+                 catch: CatchCallback = None,
+                 complete: CompleteCallback = None,
+                 loop: asyncio.AbstractEventLoop=None):
         super().__init__(starter, then, catch, complete,
                          raise_again=False,
                          start_now=False)
@@ -54,40 +63,75 @@ class AwaitablePromise(Promise):
     def resolve(self, result: Any):
         self._result = result
         self._results.append(result)
-        self.future.set_result(result)
+
+        if not self._then:
+            return self._finish(PromiseState.fulfilled)
 
         for t in self._then:
-            self._ensure_awaited(t(result))
+            self._ensure_awaited(t(result),
+                                 callback=self._done(
+                                     self._finish,
+                                     PromiseState.fulfilled,
+                                     len(self._then)))
 
     def reject(self, error: Exception):
         self._error = error
-        self._state = PromiseState.rejected
 
         if not self._catch:
-            # only set exception if no handler, will be thrown back in loop exception_handler
-            self.future.set_exception(error)
-            raise UnhandledPromiseError(f"Unhandled promise exception: {self.id}") from error
-
-        self.future.set_result(error)
+            self._state = PromiseState.rejected
+            raise UnhandledPromiseError(
+                f"Unhandled promise exception: {self.id}") from error
 
         for catcher in self._catch:
-            self._ensure_awaited(catcher(error))
+            self._ensure_awaited(catcher(error),
+                                 callback=self._done(
+                                     self._finish,
+                                     PromiseState.fulfilled,
+                                     len(self._catch)))
 
-    def finish(self):
+    def _finish(self, state):
+        if not self._complete:
+            self._on_complete(state)
+
         for c in self._complete:
-            self._ensure_awaited(c(self.result, self.error))
+            self._ensure_awaited(c(self.result, self._error),
+                                 callback=self._done(
+                                     self._on_complete,
+                                     state,
+                                     len(self._complete)))
+
+    def _on_complete(self, state):
+        if self._error:
+            self.future.set_exception(self._error)
+        else:
+            self.future.set_result(self.result)
+        self._state = state
+
+    def _done(self, on_finish, state, to_do):
+        done = asyncio.Queue(loop=self.loop)
+
+        def _done(*args, **kwargs):
+            done.put_nowait(1)
+            if done.qsize() == to_do:
+                on_finish(state)
+
+        return _done
 
     def __await__(self):
         while not self.future.done():
             yield from self.future
         return self.future.result()
 
-    def _starter_handler(self, started):
-        self._ensure_awaited(started)
+    def callback_handler(self, obj: Any):
+        self._ensure_awaited(obj)
 
-    def _ensure_awaited(self, obj):
+    def _ensure_awaited(self, obj, callback=None):
         if asyncio.iscoroutine(obj):
-            self.loop.create_task(obj)
+            task = self.loop.create_task(obj)
+            if callback:
+                task.add_done_callback(callback)
+        elif callback:
+            callback()
 
     @property
     def error(self):
