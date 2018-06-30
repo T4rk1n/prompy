@@ -40,7 +40,8 @@ def read_file(file: str, mode='r', prom_type=Promise, **kwargs) -> Promise:
     return prom_type(starter, **kwargs)
 
 
-def write_file(file: str, content: Any, mode: str='w', prom_type=Promise, **kwargs) -> Promise:
+def write_file(file: str, content: Any,
+               mode: str='w', prom_type=Promise, **kwargs) -> Promise:
     """
     Write to a file and resolve when it's done.
 
@@ -69,13 +70,17 @@ def delete_file(file: str, prom_type=Promise, **kwargs) -> Promise:
 
 
 def walk(directory: str,
-         filter_directories: str=None, filter_filename: str=None, prom_type=Promise, **kwargs) -> Promise[pathlib.Path]:
+         filter_directories: str=None,
+         filter_filename: str=None,
+         on_found=None,
+         prom_type=Promise, **kwargs) -> Promise[pathlib.Path]:
     """
-    Resolve a path for each of the file found in the directory.
+    Resolve a list of paths that were walked.
 
     :param directory: path to walk.
-    :param filter_directories: a regex filter to apply to directory.
-    :param filter_filename: a regex filter to apply to filenames.
+    :param on_found: called for each path that was found.
+    :param filter_directories: a regex filter to exclude directories.
+    :param filter_filename: a regex filter to exclude filenames.
     :param prom_type: Type of the promise to instantiate.
     :param kwargs: kwargs of the promise initializer.
     :return:
@@ -84,10 +89,12 @@ def walk(directory: str,
     def starter(resolve, _):
         dir_filter = None
         file_filter = None
+        walked = []
         if filter_directories:
             dir_filter = re.compile(filter_directories)
         if filter_filename:
             file_filter = re.compile(filter_filename)
+
         for current, sub_directories, files in os.walk(directory):
             if dir_filter:
                 to_delete = []
@@ -102,13 +109,19 @@ def walk(directory: str,
             for fi in file_list:
                 file_path = os.path.join(current, fi)
                 p = pathlib.Path(file_path)
-                resolve(p)
+                walked.append(p)
+                if on_found:
+                    on_found(p)
+
+        resolve(walked)
 
     return prom_type(starter, **kwargs)
 
 
 def compress_directory(directory: str, destination: str,
-                       archive_format: str='zip', root_dir: str='.', prom_type=Promise, **kwargs) -> Promise:
+                       archive_format: str='zip',
+                       root_dir: str='.',
+                       prom_type=Promise, **kwargs) -> Promise:
     """
 
     :param directory:
@@ -120,13 +133,15 @@ def compress_directory(directory: str, destination: str,
     :return:
     """
     def starter(resolve, _):
-        archive = shutil.make_archive(destination, archive_format, base_dir=directory, root_dir=root_dir)
+        archive = shutil.make_archive(destination, archive_format,
+                                      base_dir=directory, root_dir=root_dir)
         resolve(archive)
     return prom_type(starter, **kwargs)
 
 
 def decompress(filename: str, destination: str,
-               archive_format: str='zip', prom_type=Promise, **kwargs) -> Promise:
+               archive_format: str='zip',
+               prom_type=Promise, **kwargs) -> Promise:
     """
 
 
