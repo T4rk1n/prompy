@@ -31,7 +31,7 @@ from typing import Any, Optional, Union, Dict, List
 
 from prompy.container import BasePromiseContainer
 from prompy.networkio import urlcall, http_constants
-from prompy.networkio.urlcall import encode_url_params
+from prompy.networkio.url_tools import encode_url_params
 from prompy.promise import Promise
 
 
@@ -43,7 +43,7 @@ class CallRoute:
 
     def __init__(self,
                  route: str,
-                 method: str=http_constants.HTTP_GET,
+                 method: str=http_constants.GET,
                  content_type: str=http_constants.CONTENT_TYPE_JSON):
         """
         Route data object with format methods.
@@ -69,7 +69,6 @@ class CallRoute:
             route = CallRoute('/user/<user>')
             r = route.format_route_params(user='bob')
 
-        :param kwargs:
         :return:
         """
         if not self.route_params:
@@ -84,18 +83,19 @@ class CallRoute:
             route = route.replace(f'<{p}>', str(value))
         return route
 
-    def format_data(self, data: Optional[Union[Dict, List, str]]):
+    def format_data(self, data: Optional[Union[Dict, List, str]], encoding='utf-8'):
         """
         Serialize the data according to content-type.
 
+        :param encoding:
         :param data:
         :return:
         """
         if not data:
             return
         if http_constants.CONTENT_TYPE_JSON in self.content_type:
-            return json.dumps(data).encode('utf-8')
-        return data.encode('utf-8')
+            return json.dumps(data).encode(encoding)
+        return data.encode(encoding)
 
 
 class _MetaCall(type):

@@ -1,47 +1,23 @@
 import json
-from typing import NamedTuple, Dict, Any, Callable
-from urllib import request, parse, error
+from typing import Any, Callable
+from urllib import request, error
 
 from prompy.errors import UrlCallError
-from prompy.networkio.http_constants import HTTP_POST, HTTP_PUT
+from prompy.networkio.http_constants import POST, PUT
+from prompy.networkio.url_tools import UrlCallResponse, encode_url_params, default_content_mapper
 from prompy.promise import Promise
 
 
-class UrlCallResponse(NamedTuple):
-    url: str
-    content_type: str
-    content: str
-    status: int
-    headers: dict
-    msg: str
-    reason: str
-
-
-def encode_url_params(url: str, params: Dict[str, Any]) -> str:
-    data = parse.urlencode(params)
-    return f"{url}?{data}"
-
-
-def default_mapper(content_type: str, content: Any):
-    """
-    Default mapper for :py:func:`url_call`
-
-    :param content_type: support `application/json`
-    :param content: to deserialize
-    :return: deserialized content if possible
-    """
-    if 'application/json' in content_type:
-        return json.loads(content)
-    if any(x in content_type for x in ('text/html', 'text/plain')):
-        return content.decode()
-    return content
-
-
-def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=False, method=None,
-             content_mapper: Callable[[str, str], Any] = default_mapper,
+def url_call(url,
+             data=None,
+             headers=None,
+             origin_req_host=None,
+             unverifiable=False,
+             method=None,
+             content_mapper: Callable[[str, str, str], Any] = default_content_mapper,
              prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
     """
-    Base http call
+    Base http call using urllib.
 
     :param url:
     :param data:
@@ -49,7 +25,6 @@ def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=Fa
     :param origin_req_host:
     :param unverifiable:
     :param method:
-    :param session:
     :param content_mapper:
     :param prom_type:
     :param kwargs:
@@ -61,13 +36,15 @@ def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=Fa
                                   origin_req_host=origin_req_host, method=method, unverifiable=unverifiable)
             with request.urlopen(req) as rep:
                 content_type = rep.headers.get_content_type()
+                encoding = rep.headers.get_content_charset()
                 rep_headers = {}
                 for k, v in rep.headers.items():
                     rep_headers[k] = v
                 content = rep.read()
                 if content_mapper:
-                    content = content_mapper(content_type, content)
-                resolve(UrlCallResponse(url, content_type, content, rep.status, headers, rep.msg, rep.reason))
+                    content = content_mapper(content_type, content, encoding)
+                resolve(UrlCallResponse(url, content_type, content, rep.status,
+                                        rep_headers, rep.msg, rep.reason, encoding))
         except error.HTTPError as e:
             e.read()
             reject(UrlCallError(f" {url} : {e.code} : {e.reason}"))
@@ -75,7 +52,7 @@ def url_call(url, data=None, headers=None, origin_req_host=None, unverifiable=Fa
 
 
 def post(url, data=None, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
-    return url_call(url, method=HTTP_POST, data=data, prom_type=prom_type, **kwargs)
+    return url_call(url, method=POST, data=data, prom_type=prom_type, **kwargs)
 
 
 def get(url, params: dict=None, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
@@ -85,7 +62,7 @@ def get(url, params: dict=None, prom_type=Promise, **kwargs) -> Promise[UrlCallR
 
 
 def put(url, data, prom_type=Promise, **kwargs) -> Promise[UrlCallResponse]:
-    return url_call(url, data, method=HTTP_PUT, prom_type=prom_type, **kwargs)
+    return url_call(url, data, method=PUT, prom_type=prom_type, **kwargs)
 
 
 def json_call(url,
