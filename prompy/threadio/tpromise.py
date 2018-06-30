@@ -17,10 +17,12 @@ from prompy.threadio.promise_queue import PromiseQueuePool
 
 # GLOBAL THREAD POOL
 
-_prom_pool_size = os.getenv('PROMPY_THREAD_POOL_SIZE', 2)
-_prom_thread_idle_time = os.getenv('PROMPY_THREAD_IDLE_TIME', 0.5)
+_pool_size = int(os.getenv('PROMPY_THREAD_POOL_SIZE', '2'))
+_idle_time = float(os.getenv('PROMPY_THREAD_IDLE_TIME', '0.5'))
+_daemon = os.getenv('PROMPY_THREAD_DAEMON', 'false') == 'true'
 
-_prom_pool = PromiseQueuePool(pool_size=_pool_size, max_idle=_idle_time, daemon=_daemon)
+_prom_pool = PromiseQueuePool(
+    pool_size=_pool_size, max_idle=_idle_time, daemon=_daemon)
 
 
 class TPromise(Promise):

@@ -41,7 +41,6 @@ class PromiseQueue(PromiseContainer):
     def _run(self):
         self._running = True
         idle_start = None
-        current = None
         while self._running:
             try:
                 current = self._queue.get(block=False, timeout=self._queue_timeout)
@@ -66,9 +65,6 @@ class PromiseQueue(PromiseContainer):
                 self._error = e
                 self._stopped()
                 raise e
-            # finally:
-            #     if current:
-            #         del self._promises[current]
         self._stopped()
 
     def start(self):
